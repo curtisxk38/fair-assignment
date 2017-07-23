@@ -1,4 +1,5 @@
 import json
+from maximal_match import max_flow, alternating_path, label_match
 
 def load(name):
     with open(name, "r") as f:
@@ -25,56 +26,75 @@ def initial(matrix):
 def assignment(matrix):
     initial(matrix)
 
-    print_matrix(matrix)
-
     while True:
         converted = convert_0weight(matrix)
-        matched, num_matched = maximum_matching(converted)
-        print("{}, {}".format(matched, num_matched))
+        matched, num_matched = max_flow(converted)
 
         if num_matched == len(matrix):
             break
         else:
-            iterative_step(matrix)
-            break
+            iterative_step(matrix, converted, matched)
+    print(matched)
+
+def adjust_by(i, j, matched_rows, matched_cols, min_val):
+    if i in matched_rows and j in matched_cols:
+        return min_val
+    elif i not in matched_rows and j not in matched_cols:
+        return -1 * min_val
+    else:
+        return 0
+    
+
 
 def convert_0weight(matrix_old):
     # convert 0 weight edges to 1 and non zero weight edges to 0
     matrix = [[1 if cost == 0 else 0 for cost in row] for row in matrix_old]
     return matrix
 
-def maximum_matching(matrix):
-    # keep track of applicants assigned to jobs
-    # match[i] = agent index assigned to task i
-    # -1 means not assigned
-    match_list = [-1] * len(matrix[0])
-    # count of jobs assigned to agent
-    result = 0
+def min_vertex_cover(matrix, matched):
+    # find min vertex cover from maximal matching
+    min_vertex = [[], []]
     for i in range(len(matrix)):
-        # mark all jobs as not seen for the next agent
-        seen = [False] * len(matrix)
-        # Find if this agent can get a job
-        if bpm(i, match_list, seen, matrix):
-            result += 1
-    return match_list, result
+        if matched[i] == -1:
+            for j in range(len(matrix[0])):
+                if matrix[i][j] == 1:
+                    min_vertex[1].append(j)
 
-def iterative_step(matrix):
-    pass
-
-def bpm(agent, match_list, seen, matrix):
-    # try every job
+    
     for j in range(len(matrix[0])):
-        if matrix[agent][j] == 1 and not seen[j]:
-            seen[j] = True
-            # if task j is not assigned to an agent
-            # OR if the previously assigned agent for task j (match_list[j])
-            #  has an alternate job available
+        this_matched = False
+        coming_from = None
+        for i in range(len(matrix)):
+            if matched[i] == j:
+                this_matched = True
+                break
+            if matrix[i][j] == 1:
+                coming_from = i
+        if not this_matched:
+            min_vertex[0].append(coming_from)
 
-            # since seen[j] is marked as already visited, the recursive call won't assign task j to the current match_list[j] again
-            if match_list[j] == -1 or bpm(match_list[j], match_list, seen, matrix):
-                match_list[j] = agent
-                return True
-    return False
+    return min_vertex
+
+
+def iterative_step(matrix, converted, matched):
+    matched_rows, matched_cols = min_vertex_cover(converted, matched)
+    
+    # calc min val
+    min_val = None
+    for i in range(len(matrix)):
+        if i not in matched_rows:
+            for j in range(len(matrix[0])):
+                if j not in matched_cols:
+                    if min_val is None:
+                        min_val = matrix[i][j]
+                    elif matrix[i][j] < min_val:
+                        min_val = matrix[i][j]
+
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            matrix[i][j] += adjust_by(i, j, matched_rows, matched_cols, min_val)
+    print_matrix(matrix)
+
 
 def main():
     test = [[1, 4, 5], [5, 7, 6], [5, 8, 8]]
