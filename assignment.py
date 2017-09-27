@@ -93,7 +93,6 @@ def iterative_step(matrix, converted, matched):
     for i in range(len(matrix)):
         for j in range(len(matrix[0])):
             matrix[i][j] += adjust_by(i, j, matched_rows, matched_cols, min_val)
-    print_matrix(matrix)
 
 
 def main():
